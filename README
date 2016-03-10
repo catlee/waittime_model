@@ -1,0 +1,34 @@
+This repository contains tools to analyze and model infrastructure capacity.
+
+Requirements:
+- Setup up a virtualenv with python3.5
+- pip install aiohttp
+
+My basic flow is something like this, for example calculating various metrics
+for our OSX 10.10 testers (called t-yosemite-r7-XXX) since February 1, 2016:
+
+1) Grab upstream data since February 1st, filter by our naming pattern,
+   compress and save:
+
+    python get_data.py --from 2016-02-01 | grep t-yosemite-r7 | gzip > t-yosemite-r7.log.gz
+
+2) Look at wait time metrics for the real historical data.
+
+    zcat t-yosemite-r7.log.gz | python calc_waits.py
+
+3) Look at build-to-build metrics from the historical data. You'll need
+   these numbers to plug into the wait time simulator
+
+    zcat t-yosemite-r7.log.gz | python calc_b2btime.py
+
+4) Strip out just the job request time / duration information.
+
+    zcat t-yosemite-r7.log.gz | python get_jobs.py| gzip > t-yosemite-r7.jobs.gz
+
+5) Run the wait time simulator.
+
+    zcat t-yosemite-r7.jobs.gz| python simulate_waits.py -b 200 -n 198
+
+   This says to simulate the wait times for 198 machines (-n 198) given a
+   200s minimum delay between jobs (-b 200; the build-to-build time calculated
+   by calc_b2btime.py)
